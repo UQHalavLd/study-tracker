@@ -1,21 +1,30 @@
 # 📚 StudyTracker — Akıllı Ders Çalışma ve İlerleme Takip Platformu
 
-Kullanıcıların kaynak kitaplarını, deneme sınavı sonuçlarını ve günlük çalışma rutinlerini takip ettiği; **yapay zeka desteğiyle** kişiselleştirilmiş ders çalışma programları üreten, modern ve güvenli bir web uygulaması.
+> **Geliştirici:** Bu platform **1has** tarafından geliştirilmiştir.
+
+Kullanıcıların kaynak kitaplarını, deneme sınavı sonuçlarını ve günlük çalışma rutinlerini takip ettiği; **yapay zeka desteğiyle** kişiselleştirilmiş ders çalışma programları üreten, modern ve sıfır veri sızıntılı güvenli web uygulaması.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?style=flat-square&logo=tailwind-css)
 ![Supabase](https://img.shields.io/badge/Supabase-Auth_%26_DB-3ECF8E?style=flat-square&logo=supabase)
 ![Gemini](https://img.shields.io/badge/Google_Gemini-AI-4285F4?style=flat-square&logo=google)
+![Security](https://img.shields.io/badge/Security-RLS_Hardened-green?style=flat-square)
 
 ---
 
 ## ✨ Özellikler
 
-### 🔐 Kimlik Doğrulama
-- Email/Password ve Google OAuth ile giriş
-- Supabase Row Level Security (RLS) ile güvenli veri erişimi
-- Otomatik profil oluşturma
+### 🔐 Kimlik Doğrulama & Güvenlik
+- Güvenli Email/Password tabanlı oturum açma
+- **Supabase Row Level Security (RLS)** ile sıfır veri sızıntısı: her kullanıcı sadece kendi verilerine erişebilir
+- HTTP Güvenlik Başlıkları (X-Frame-Options DENY, X-Content-Type-Options nosniff)
+- Otomatik profil oluşturma ve oturum koruması
+
+### 🛡️ Yönetici (Admin) Paneli (`/dashboard/admin`)
+- Sistem istatistikleri (kullanıcı sayısı, kitap sayısı, deneme sayısı, AI planları)
+- Altyapı ve API sağlık kontrolü (PostgreSQL, Gemini 1.5, Google Books)
+- TYT & AYT ders/branş yönetimi ve yeni branş ekleme arayüzü
 
 ### 📖 Kitap Yönetimi
 - **Google Books API** ile kitap arama (ISBN veya kitap adı)

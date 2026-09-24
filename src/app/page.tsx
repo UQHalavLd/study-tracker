@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   ArrowRight,
   Sparkles,
+  ShieldCheck,
+  Code2,
 } from "lucide-react";
 
 export default function Home() {
@@ -15,13 +17,18 @@ export default function Home() {
       {/* Navbar */}
       <header className="border-b border-gray-200/80 dark:border-gray-800/80 bg-white/70 dark:bg-gray-900/70 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
               <BookOpen className="w-5 h-5" />
             </div>
-            <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              StudyTracker
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                StudyTracker
+              </span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                1has
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -44,9 +51,17 @@ export default function Home() {
       {/* Hero Section */}
       <main className="flex-1">
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 mb-8 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 mb-6 animate-fade-in">
             <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>Google Gemini 1.5 Flash Yapay Zeka Destekli</span>
+            <span>Google Gemini 1.5 Flash Destekli Akıllı Takip</span>
+          </div>
+
+          {/* Geliştirici Rozeti */}
+          <div className="mb-6 flex justify-center">
+            <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 shadow-sm">
+              <Code2 className="w-3.5 h-3.5" />
+              <span>1has tarafından geliştirilmiştir</span>
+            </div>
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-gray-950 dark:text-white max-w-4xl mx-auto leading-tight sm:leading-none">
@@ -58,7 +73,7 @@ export default function Home() {
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            Kaynak kitaplarının sayfa ilerlemelerini takip et, TYT & AYT deneme netlerini grafiklerle analiz et ve eksiklerine özel haftalık dinamik ders programı oluştur.
+            Kaynak kitaplarının sayfa ilerlemelerini takip et, TYT &amp; AYT deneme netlerini grafiklerle analiz et ve eksiklerine özel haftalık dinamik ders programı oluştur.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -131,27 +146,33 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Quick Start Section */}
-        <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-16 px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-extrabold mb-4">Hemen Çalışmaya Başla</h2>
-            <p className="text-blue-100 text-lg mb-8 max-w-xl mx-auto">
-              Hesabını oluştur, kitaplarını ve son denemeni gir; sana özel ders programın dakikalar içinde hazır olsun.
-            </p>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-semibold bg-white text-blue-700 hover:bg-blue-50 shadow-lg shadow-black/10 transition-all hover:scale-[1.02]"
-            >
-              <span>Ücretsiz Kayıt Ol</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+        {/* Güvenlik & Gizlilik Vurgusu */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="p-8 rounded-3xl bg-gradient-to-br from-gray-900 to-indigo-950 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-indigo-900/50">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 rounded-2xl bg-white/10 text-emerald-400 shrink-0">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Tam Veri Güvenliği &amp; Sıfır Sızıntı</h3>
+                <p className="text-gray-300 text-sm mt-1 max-w-xl">
+                  Tüm çalışma verileriniz ve sınav sonuçlarınız PostgreSQL Row Level Security (RLS) ile korunur. Verilerinize sadece siz erişebilirsiniz.
+                </p>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-xs text-gray-400 uppercase tracking-widest block">Geliştirici</span>
+              <span className="text-lg font-black text-white">1has</span>
+            </div>
           </div>
         </section>
       </main>
 
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-        <p>© {new Date().getFullYear()} StudyTracker — Akıllı Ders Çalışma ve İlerleme Takip Platformu</p>
+        <p className="font-medium">
+          © {new Date().getFullYear()} StudyTracker — Bu platform <strong className="text-blue-600 dark:text-blue-400 font-bold">1has</strong> tarafından geliştirilmiştir.
+        </p>
       </footer>
     </div>
   );

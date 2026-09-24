@@ -79,17 +79,23 @@ export function Sidebar({ isOpen, onClose, userFullName }: SidebarProps) {
           })}
         </nav>
 
-        {/* User info */}
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+        {/* User info & 1has branding */}
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-              <User className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            <div className="h-9 w-9 flex-shrink-0 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+              <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                {userFullName || 'Kullanıcı'}
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                {userFullName || 'Öğrenci'}
               </p>
+              <p className="text-[11px] text-gray-400">Aktif Hesap</p>
             </div>
+          </div>
+
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between text-[11px] text-gray-400">
+            <span>Geliştirici:</span>
+            <span className="font-extrabold text-blue-600 dark:text-blue-400">1has</span>
           </div>
         </div>
       </aside>
