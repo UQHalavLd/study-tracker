@@ -51,6 +51,24 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Yeni kaydolan kullanıcının e-postasını anında otomatik onayla (e-posta doğrulama kotasını ve beklemesini önler)
+CREATE OR REPLACE FUNCTION public.auto_confirm_user_email()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  NEW.email_confirmed_at = COALESCE(NEW.email_confirmed_at, now());
+  NEW.confirmed_at = COALESCE(NEW.confirmed_at, now());
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_before_insert_confirm ON auth.users;
+CREATE TRIGGER on_auth_user_before_insert_confirm
+  BEFORE INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.auto_confirm_user_email();
+
 -- -------------------------------------------------------
 -- 2.2 Dersler / Branşlar
 -- -------------------------------------------------------
