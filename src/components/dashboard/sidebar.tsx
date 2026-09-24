@@ -3,7 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, LayoutDashboard, ClipboardList, Calendar, Settings, X, User } from 'lucide-react'
+import { BookOpen, LayoutDashboard, ClipboardList, Calendar, Settings, X, User, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarProps {
@@ -21,6 +21,7 @@ export function Sidebar({ isOpen, onClose, userFullName }: SidebarProps) {
     { name: 'Denemelerim', href: '/dashboard/exams', icon: ClipboardList },
     { name: 'Çalışma Planı', href: '/dashboard/study-plan', icon: Calendar },
     { name: 'Ayarlar', href: '/dashboard/settings', icon: Settings },
+    { name: 'Yönetici Paneli', href: '/dashboard/admin', icon: Shield },
   ]
 
   return (

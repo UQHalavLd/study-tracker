@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, AlertTriangle, CheckCircle, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -11,8 +11,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+
   const router = useRouter();
   const supabase = createClient();
 
@@ -20,34 +23,72 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    setResendSuccess(false);
+    setUnconfirmedEmail(null);
 
-    if (error) {
-      setError(error.message);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        if (signInError.message.toLowerCase().includes('email not confirmed')) {
+          setUnconfirmedEmail(email);
+          setError('E-posta adresiniz henüz doğrulanmamış. Lütfen gelen kutunuzdaki onay bağlantısına tıklayın.');
+        } else if (signInError.message.toLowerCase().includes('invalid login credentials')) {
+          setError('E-posta adresi veya şifre hatalı.');
+        } else {
+          setError(signInError.message);
+        }
+        setLoading(false);
+      } else {
+        router.push('/dashboard');
+        router.refresh();
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Giriş yapılırken bir hata oluştu.';
+      setError(msg);
       setLoading(false);
-    } else {
-      router.push('/dashboard');
-      router.refresh();
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!unconfirmedEmail) return;
+    setResending(true);
+    setResendSuccess(false);
+
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: unconfirmedEmail,
+      });
+
+      if (resendError) {
+        setError('Doğrulama e-postası gönderilemedi: ' + resendError.message);
+      } else {
+        setResendSuccess(true);
+      }
+    } catch {
+      setError('E-posta gönderilirken bir hata oluştu.');
+    } finally {
+      setResending(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     setError(null);
-    
-    const { error } = await supabase.auth.signInWithOAuth({
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
-    if (error) {
-      setError(error.message);
+    if (oauthError) {
+      setError(oauthError.message);
       setGoogleLoading(false);
     }
   };
@@ -55,100 +96,118 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md flex flex-col items-center">
-        <div className="flex items-center justify-center bg-blue-600 w-12 h-12 rounded-xl mb-4 text-white">
-          <BookOpen size={28} />
-        </div>
-        <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-          StudyTracker
+        <Link href="/" className="flex items-center gap-2 mb-4 group">
+          <div className="flex items-center justify-center bg-blue-600 w-12 h-12 rounded-xl text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+            <BookOpen size={28} />
+          </div>
+          <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            StudyTracker
+          </span>
+        </Link>
+        <h2 className="text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+          Tekrar Hoş Geldiniz
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-          Hesabınıza giriş yapın
+          Çalışma programınıza ve hedeflerinize erişin
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-lg sm:rounded-xl sm:px-10 border border-gray-100 dark:border-gray-700">
-          
+        <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-xl sm:rounded-2xl sm:px-10 border border-gray-100 dark:border-gray-700">
           {error && (
-            <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-              {error}
+            <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="flex-1 leading-relaxed">
+                <p>{error}</p>
+                {unconfirmedEmail && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resending}
+                      className="inline-flex items-center gap-1.5 font-bold underline hover:no-underline text-xs disabled:opacity-50"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>{resending ? 'Gönderiliyor...' : 'Doğrulama Bağlantısını Yeniden Gönder'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleLogin}>
+          {resendSuccess && (
+            <div className="mb-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-xl text-xs flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 shrink-0" />
+              <span>Doğrulama e-postası gelen kutunuza yeniden gönderildi.</span>
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={handleLogin}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 E-posta Adresi
               </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors shadow-sm outline-none"
-                  placeholder="ornek@email.com"
-                />
-              </div>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="ornek@email.com"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-sm"
+              />
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Şifre
                 </label>
-                <Link href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
-                  Şifremi unuttum
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                >
+                  Şifremi Unuttum
                 </Link>
               </div>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors shadow-sm outline-none"
-                  placeholder="••••••••"
-                />
-              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-sm"
+              />
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 flex justify-center py-3 px-4 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01]"
+            >
+              {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
+            </button>
           </form>
 
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+                <div className="w-full border-t border-gray-200 dark:border-gray-700" />
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                  veya şununla devam et
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white dark:bg-gray-800 px-3 text-gray-500 dark:text-gray-400">
+                  Veya Google ile devam et
                 </span>
               </div>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-5">
               <button
                 onClick={handleGoogleLogin}
                 disabled={googleLoading}
-                className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center items-center py-2.5 px-4 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none transition-colors disabled:opacity-50"
               >
-                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     fill="#4285F4"
@@ -171,9 +230,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-            Hesabın yok mu?{' '}
-            <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+            Henüz hesabınız yok mu?{' '}
+            <Link
+              href="/register"
+              className="font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 transition-colors"
+            >
               Kayıt ol
             </Link>
           </p>
