@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyTracker — Akıllı Ders Çalışma ve İlerleme Takip Platformu (by 1has)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(156, 163, 175, 0.1);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.3);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(156, 163, 175, 0.5);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-200">
+
+  <!-- ================= TOP NAVBAR ================= -->
+  <header class="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo & 1has branding -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('dashboard')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+          <i data-lucide="book-open" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+              StudyTracker
+            </span>
+            <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              by 1has
+            </span>
+          </div>
+          <p class="text-[10px] text-gray-400 font-medium hidden sm:block">Akıllı YKS & Ders Takip Platformu</p>
+        </div>
+      </div>
+
+      <!-- Quick Nav Buttons & Theme Toggle -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Pomodoro Quick Trigger -->
+        <button onclick="navigateTo('pomodoro')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800 hover:scale-105 transition-all" title="Canlı Pomodoro Sayacı">
+          <i data-lucide="timer" class="w-4 h-4"></i>
+          <span class="hidden md:inline" id="nav-pomodoro-timer">25:00</span>
+        </button>
+
+        <!-- Dark/Light Mode Button -->
+        <button onclick="toggleDarkMode()" class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Tema Değiştir">
+          <i data-lucide="sun" id="theme-icon-sun" class="w-5 h-5 hidden dark:block"></i>
+          <i data-lucide="moon" id="theme-icon-moon" class="w-5 h-5 block dark:hidden"></i>
+        </button>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button onclick="toggleMobileSidebar()" class="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN LAYOUT WITH SIDEBAR ================= -->
+  <div class="flex-1 flex max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
+
+    <!-- SIDEBAR (DESKTOP & MOBILE OVERLAY) -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4 transform -translate-x-full lg:translate-x-0 lg:static lg:w-60 lg:p-0 lg:bg-transparent lg:border-0 transition-transform duration-300 ease-in-out flex flex-col justify-between">
+      <div class="space-y-6">
+        <!-- Mobile close button -->
+        <div class="flex items-center justify-between lg:hidden pb-4 border-b border-gray-200 dark:border-gray-800">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-lg text-blue-600">StudyTracker</span>
+            <span class="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded">1has</span>
+          </div>
+          <button onclick="toggleMobileSidebar()" class="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+            <i data-lucide="x" class="w-6 h-6"></i>
+          </button>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="space-y-1" id="sidebar-nav">
+          <button onclick="navigateTo('dashboard')" data-nav="dashboard" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all bg-blue-600 text-white shadow-md shadow-blue-500/20">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Gösterge Paneli</span>
+          </button>
+
+          <button onclick="navigateTo('books')" data-nav="books" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+            <span>Kitaplarım</span>
+            <span id="badge-books-count" class="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold">0</span>
+          </button>
+
+          <button onclick="navigateTo('exams')" data-nav="exams" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+            <span>Denemelerim</span>
+            <span id="badge-exams-count" class="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold">0</span>
+          </button>
+
+          <button onclick="navigateTo('study-plan')" data-nav="study-plan" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <i data-lucide="brain-circuit" class="w-4 h-4 text-emerald-500"></i>
+            <span class="flex items-center gap-1.5">
+              <span>AI Çalışma Planı</span>
+            </span>
+          </button>
+
+          <button onclick="navigateTo('tutor')" data-nav="tutor" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+            <span>Multi-Agent Asistan</span>
+          </button>
+
+          <button onclick="navigateTo('pomodoro')" data-nav="pomodoro" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <i data-lucide="clock" class="w-4 h-4 text-orange-500"></i>
+            <span>Pomodoro Sayacı</span>
+          </button>
+
+          <button onclick="navigateTo('admin')" data-nav="admin" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <i data-lucide="shield" class="w-4 h-4 text-indigo-500"></i>
+            <span>Yönetici & Ayarlar</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Developer 1has Badge in Sidebar -->
+      <div class="mt-8 pt-4 border-t border-gray-200 dark:border-gray-800/80">
+        <div class="p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800/60 border border-blue-100 dark:border-gray-700 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+              1H
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-900 dark:text-white">1has System</p>
+              <p class="text-[10px] text-gray-500 dark:text-gray-400">Geliştirici İmzası</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-600 text-white">v2.0</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile Backdrop -->
+    <div id="mobile-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden backdrop-blur-xs"></div>
+
+    <!-- ================= MAIN CONTENT VIEWPORT ================= -->
+    <main class="flex-1 min-w-0" id="main-content">
+
+      <!-- ================= 1. DASHBOARD VIEW ================= -->
+      <section id="view-dashboard" class="space-y-6">
+        <!-- Welcome Hero Banner -->
+        <div class="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-blue-500/10">
+          <div class="relative z-10 max-w-2xl">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-md mb-3">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>1has Tarafından Hazırlanan Akıllı Takip Paneli</span>
+            </div>
+            <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight">
+              Hedeflerine Bir Adım Daha Yaklaş!
+            </h1>
+            <p class="mt-2 text-sm sm:text-base text-blue-100 leading-relaxed">
+              Bugünkü görevlerini tamamla, kitaplarındaki çözülen sayfaları güncelle ve son deneme netlerinin grafikteki yükselişini izle.
+            </p>
+            <div class="mt-5 flex flex-wrap items-center gap-3">
+              <button onclick="navigateTo('study-plan')" class="px-5 py-2.5 rounded-xl bg-white text-blue-600 font-bold text-sm shadow hover:bg-blue-50 transition-all flex items-center gap-2">
+                <i data-lucide="brain-circuit" class="w-4 h-4"></i>
+                <span>AI Planı Oluştur</span>
+              </button>
+              <button onclick="openBookModal()" class="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-sm transition-all flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Kitap Ekle</span>
+              </button>
+              <button onclick="openExamModal()" class="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-sm transition-all flex items-center gap-2">
+                <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                <span>Deneme Gir</span>
+              </button>
+            </div>
+          </div>
+          <!-- Decorative Background Circles -->
+          <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        </div>
+
+        <!-- 4 Key Stat Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="p-5 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Kitaplarım</span>
+              <div class="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+                <i data-lucide="book-open" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-black" id="stat-total-books">0</div>
+            <p class="text-xs text-gray-400 mt-1" id="stat-pages-info">0 sayfa çözüldü</p>
+          </div>
+
+          <div class="p-5 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">İlerleme</span>
+              <div class="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+                <i data-lucide="trending-up" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400" id="stat-progress-percent">%0</div>
+            <p class="text-xs text-gray-400 mt-1">Kitap tamamlama oranı</p>
+          </div>
+
+          <div class="p-5 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Son Deneme Neti</span>
+              <div class="p-2 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400">
+                <i data-lucide="target" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-black text-purple-600 dark:text-purple-400" id="stat-last-net">—</div>
+            <p class="text-xs text-gray-400 mt-1" id="stat-last-exam-name">Henüz deneme girilmedi</p>
+          </div>
+
+          <div class="p-5 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Bugünkü Görevler</span>
+              <div class="p-2 rounded-xl bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-black text-orange-600 dark:text-orange-400" id="stat-today-tasks">0 / 0</div>
+            <p class="text-xs text-gray-400 mt-1" id="stat-today-completion">Tamamlanan görev</p>
+          </div>
+        </div>
+
+        <!-- 2 Column Section: Today's Tasks & Mini Net Chart -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Today's Tasks Card -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <i data-lucide="calendar" class="w-5 h-5 text-blue-600"></i>
+                <h3 class="font-bold text-lg">Bugünün Çalışma Planı</h3>
+              </div>
+              <button onclick="navigateTo('study-plan')" class="text-xs font-bold text-blue-600 hover:underline">Tümünü Gör</button>
+            </div>
+            <div id="dashboard-today-task-list" class="space-y-2.5 flex-1 overflow-y-auto max-h-72 custom-scrollbar">
+              <!-- Dynamically populated or empty state -->
+            </div>
+          </div>
+
+          <!-- Quick Net Chart Preview -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <i data-lucide="line-chart" class="w-5 h-5 text-purple-600"></i>
+                <h3 class="font-bold text-lg">Net Gelişim Trendi</h3>
+              </div>
+              <button onclick="navigateTo('exams')" class="text-xs font-bold text-purple-600 hover:underline">Detaylı Analiz</button>
+            </div>
+            <div class="flex-1 min-h-[220px] relative">
+              <canvas id="dashboardNetChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. BOOKS MANAGEMENT VIEW ================= -->
+      <section id="view-books" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-black">Kaynak Kitaplarım</h1>
+            <p class="text-sm text-gray-500">Kitapişler arama motoru ile kitaplarını bul, sayfa hedefini ve ilerlemeni takip et.</p>
+          </div>
+          <button onclick="openBookModal()" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center gap-2 transition-all">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Yeni Kitap Ekle</span>
+          </button>
+        </div>
+
+        <!-- Filter tabs & Search -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0" id="book-filters">
+            <button onclick="filterBooks('all')" class="filter-btn px-4 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white" data-filter="all">Tümü</button>
+            <button onclick="filterBooks('active')" class="filter-btn px-4 py-1.5 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" data-filter="active">Aktif</button>
+            <button onclick="filterBooks('completed')" class="filter-btn px-4 py-1.5 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" data-filter="completed">Tamamlandı</button>
+          </div>
+          <div class="relative w-full sm:w-72">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-gray-400"></i>
+            <input type="text" id="books-local-search" oninput="renderBooksGrid()" placeholder="Kütüphanemde ara..." class="w-full pl-10 pr-4 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+          </div>
+        </div>
+
+        <!-- Books Grid Container -->
+        <div id="books-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- Dynamic Book Cards -->
+        </div>
+      </section>
+
+      <!-- ================= 3. EXAMS VIEW ================= -->
+      <section id="view-exams" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-black">Deneme Sınav Takibi</h1>
+            <p class="text-sm text-gray-500">TYT ve AYT netlerini kaydet, gelişim eğrini ve zayıf konularını anında gör.</p>
+          </div>
+          <button onclick="openExamModal()" class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow-md shadow-purple-500/20 flex items-center gap-2 transition-all">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Yeni Deneme Gir</span>
+          </button>
+        </div>
+
+        <!-- Weak Subjects Alert Card (Multi-Agent Evaluator) -->
+        <div id="weak-subjects-container" class="space-y-3">
+          <!-- Populated if any declining nets exist -->
+        </div>
+
+        <!-- Big Net Development Chart -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg flex items-center gap-2">
+              <i data-lucide="trending-up" class="w-5 h-5 text-purple-600"></i>
+              <span>Net Gelişim Analizi</span>
+            </h3>
+            <span class="text-xs text-gray-400">Tüm Denemeler</span>
+          </div>
+          <div class="h-72 w-full relative">
+            <canvas id="examsMainChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Exams List History -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs space-y-4">
+          <h3 class="font-bold text-lg flex items-center gap-2">
+            <i data-lucide="history" class="w-5 h-5 text-blue-600"></i>
+            <span>Deneme Geçmişi</span>
+          </h3>
+          <div id="exams-history-list" class="space-y-3">
+            <!-- Dynamic Exam Cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. STUDY PLAN VIEW (MULTI-AGENT) ================= -->
+      <section id="view-study-plan" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-2xl sm:text-3xl font-black">AI Destekli Ders Programı</h1>
+              <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                A-R007 Engine
+              </span>
+            </div>
+            <p class="text-sm text-gray-500">Kitaplarının kalan sayfaları ve son deneme netlerine göre kişisel haftalık çalışma takvimi.</p>
+          </div>
+          <button onclick="openPlanGeneratorModal()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-md shadow-emerald-500/20 flex items-center gap-2 transition-all">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>Yeni Program Oluştur</span>
+          </button>
+        </div>
+
+        <!-- Current Active Plan Container -->
+        <div id="active-plan-container" class="space-y-6">
+          <!-- Dynamic Plan & Days -->
+        </div>
+      </section>
+
+      <!-- ================= 5. MULTI-AGENT AI TUTOR & ASSISTANT VIEW ================= -->
+      <section id="view-tutor" class="space-y-6 hidden">
+        <div class="p-6 rounded-3xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-blue-500/10 border border-amber-200 dark:border-amber-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <i data-lucide="bot" class="w-6 h-6 text-amber-500"></i>
+              <h1 class="text-2xl font-black text-gray-900 dark:text-white">Multi-Agent Çalışma Asistanı</h1>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white">YKS Koçu</span>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1 max-w-xl">
+              A-R007 mimarisine dayanan uzman ajanlar: Çalışma stratejisi, soru çözüm teknikleri, motivasyon ve deneme analizi konularında sana rehberlik eder.
+            </p>
+          </div>
+          <span class="text-xs text-gray-400 font-mono">1has AI System</span>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col h-[520px] overflow-hidden">
+          <!-- Chat Messages Area -->
+          <div id="chat-messages" class="flex-1 p-5 overflow-y-auto space-y-4 custom-scrollbar">
+            <!-- Initial AI Welcome Message -->
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+                <i data-lucide="bot" class="w-5 h-5"></i>
+              </div>
+              <div class="p-4 rounded-2xl rounded-tl-none bg-gray-100 dark:bg-gray-800 text-sm max-w-xl leading-relaxed">
+                <p class="font-bold text-amber-600 dark:text-amber-400 mb-1">Merhaba! Ben YKS Koçun ve Çalışma Asistanın.</p>
+                <p>Eksik olduğun konuları sorabilir, çalışma taktikleri alabilir veya deneme netlerini nasıl yükselteceğini danışabilirsin. Aşağıdaki hızlı konulardan birini seçebilir veya bana doğrudan yazabilirsin!</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Action Prompts -->
+          <div class="px-5 py-2 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2 overflow-x-auto text-xs whitespace-nowrap custom-scrollbar">
+            <button onclick="sendQuickPrompt('TYT Matematikte netlerimi 10 netten 25 nete nasıl çıkarabilirim?')" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 transition-colors">
+              📐 Matematik Net Artırma
+            </button>
+            <button onclick="sendQuickPrompt('Paragraf sorularında hızlanmak için hangi teknikleri uygulamalıyım?')" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 transition-colors">
+              📖 Paragrafta Hızlanma
+            </button>
+            <button onclick="sendQuickPrompt('Fizik formüllerini unutmamak ve ezberlemek için ne yapmalıyım?')" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 transition-colors">
+              ⚡ Fizik Formül Taktikleri
+            </button>
+            <button onclick="sendQuickPrompt('Verimli bir Pomodoro ders çalışma rutini nasıl olmalı?')" class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 transition-colors">
+              ⏱️ Pomodoro Rutini
+            </button>
+          </div>
+
+          <!-- Chat Input -->
+          <div class="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
+            <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex items-center gap-2">
+              <input type="text" id="chat-input" placeholder="Bir soru sor veya takıldığın konuyu yaz..." class="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+              <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center gap-2 shadow-sm transition-all">
+                <i data-lucide="send" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Gönder</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 6. POMODORO VIEW ================= -->
+      <section id="view-pomodoro" class="space-y-6 hidden">
+        <div class="max-w-xl mx-auto p-8 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl text-center space-y-6">
+          <div class="flex items-center justify-center gap-2 text-orange-500 font-bold text-sm uppercase tracking-wider">
+            <i data-lucide="flame" class="w-5 h-5"></i>
+            <span>Odaklanma Sayacı</span>
+          </div>
+
+          <!-- Timer Mode Switchers -->
+          <div class="flex items-center justify-center gap-2 p-1.5 rounded-2xl bg-gray-100 dark:bg-gray-800 max-w-xs mx-auto text-xs font-bold">
+            <button onclick="setPomodoroMode('pomodoro')" id="btn-mode-pomodoro" class="flex-1 py-2 rounded-xl bg-white dark:bg-gray-700 shadow text-blue-600 dark:text-blue-400">Çalışma (25d)</button>
+            <button onclick="setPomodoroMode('shortBreak')" id="btn-mode-short" class="flex-1 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:text-gray-900">Mola (5d)</button>
+            <button onclick="setPomodoroMode('longBreak')" id="btn-mode-long" class="flex-1 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:text-gray-900">Uzun (15d)</button>
+          </div>
+
+          <!-- Big Countdown Display -->
+          <div class="py-6">
+            <span id="big-timer-display" class="font-mono text-7xl sm:text-8xl font-black text-gray-900 dark:text-white tracking-tighter">
+              25:00
+            </span>
+            <p id="timer-status-text" class="text-sm font-semibold text-gray-400 mt-2">Ders çalışma zamanı. Başlamaya hazır mısın?</p>
+          </div>
+
+          <!-- Controls -->
+          <div class="flex items-center justify-center gap-4">
+            <button onclick="togglePomodoroTimer()" id="btn-timer-toggle" class="w-36 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-lg shadow-lg shadow-blue-500/25 transition-all hover:scale-105 flex items-center justify-center gap-2">
+              <i data-lucide="play" id="icon-timer-play" class="w-5 h-5"></i>
+              <span id="label-timer-toggle">Başlat</span>
+            </button>
+            <button onclick="resetPomodoroTimer()" class="p-3.5 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Sıfırla">
+              <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Task Focus Selector -->
+          <div class="pt-6 border-t border-gray-100 dark:border-gray-800 text-left">
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Şu Anda Odaklanılan Görev / Kitap:</label>
+            <input type="text" id="pomodoro-focus-task" placeholder="Örn: 345 TYT Matematik Sayfa 80-95" class="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 7. ADMIN & SETTINGS VIEW ================= -->
+      <section id="view-admin" class="space-y-6 hidden">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400">
+            <i data-lucide="shield" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-black">Yönetici &amp; Sistem Ayarları</h1>
+            <p class="text-sm text-gray-500">1has StudyTracker platform altyapısı, veri yedekleme ve entegrasyonlar.</p>
+          </div>
+        </div>
+
+        <!-- System Architecture & Security Health -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs space-y-4">
+          <h3 class="font-bold text-lg flex items-center gap-2">
+            <i data-lucide="server" class="w-5 h-5 text-blue-600"></i>
+            <span>Sistem Mimarisi &amp; Güvenlik</span>
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+              <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm mb-1">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                <span>GitHub Pages Uyumlu</span>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                Sistem sunucusuz, %100 statik HTML/JS ile çalışır. Sıfır sunucu maliyeti ve kesintisiz uptime.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+              <div class="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm mb-1">
+                <i data-lucide="database" class="w-4 h-4"></i>
+                <span>Sıfır Veri Sızıntısı</span>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                Tüm veriler tarayıcıda izole saklanır. İstendiğinde Supabase PostgreSQL RLS ile buluta eşitlenir.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+              <div class="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-bold text-sm mb-1">
+                <i data-lucide="cpu" class="w-4 h-4"></i>
+                <span>Multi-Agent AI Engine</span>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                A-R007 tabanlı yerel ve harici zeka motoru ile kesintisiz ders programı ve soru-cevap asistanı.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Supabase Cloud Sync -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs space-y-4">
+          <h3 class="font-bold text-lg flex items-center gap-2">
+            <i data-lucide="cloud" class="w-5 h-5 text-indigo-600"></i>
+            <span>Supabase Bulut Senkronizasyonu (İsteğe Bağlı)</span>
+          </h3>
+          <p class="text-xs text-gray-500 leading-relaxed">
+            Platformu tek başına hiçbir hesap açmadan yerel olarak kullanabilirsiniz. Ancak verilerinizi farklı cihazlarda senkronize etmek isterseniz Supabase bilgilerinizi buraya kaydedebilirsiniz:
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Supabase URL:</label>
+              <input type="text" id="setting-supabase-url" placeholder="https://xxx.supabase.co" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Supabase Anon Key:</label>
+              <input type="password" id="setting-supabase-key" placeholder="eyJhbGciOiJIUzI1Ni..." class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            </div>
+          </div>
+          <button onclick="saveSupabaseSettings()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors">
+            Bağlantı Bilgilerini Kaydet
+          </button>
+        </div>
+
+        <!-- Backup & Restore Data (Data Portability) -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xs space-y-4">
+          <h3 class="font-bold text-lg flex items-center gap-2">
+            <i data-lucide="hard-drive-download" class="w-5 h-5 text-emerald-600"></i>
+            <span>Veri Yedekleme ve Taşıma (JSON)</span>
+          </h3>
+          <p class="text-xs text-gray-500">Tüm kitaplarınızı, deneme sınavı sonuçlarınızı ve çalışma programınızı tek tıkla dışa aktarabilir veya yedekten geri yükleyebilirsiniz.</p>
+          <div class="flex flex-wrap items-center gap-3">
+            <button onclick="exportDataJSON()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Verileri Dışa Aktar (Yedek Al)</span>
+            </button>
+            <label class="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold text-xs flex items-center gap-2 cursor-pointer transition-colors border border-gray-300 dark:border-gray-700">
+              <i data-lucide="upload" class="w-4 h-4"></i>
+              <span>Yedekten Geri Yükle</span>
+              <input type="file" id="import-json-file" accept=".json" onchange="importDataJSON(event)" class="hidden">
+            </label>
+            <button onclick="clearAllData()" class="px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 text-xs font-bold border border-red-200 dark:border-red-900 transition-colors ml-auto">
+              Tüm Verileri Sıfırla
+            </button>
+          </div>
+        </div>
+
+        <!-- 1has Developer Attribution Card -->
+        <div class="p-6 rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="font-extrabold text-lg">Geliştirici İmzası</h4>
+            <span class="px-2.5 py-1 rounded-full bg-white/20 text-xs font-black">1has</span>
+          </div>
+          <p class="text-sm text-blue-100 leading-relaxed">
+            Bu platform, YKS ve ders çalışma süreçlerini yapay zeka ile kolaylaştırmak amacıyla <strong>1has</strong> tarafından özel olarak tasarlanıp geliştirilmiştir. Sıfır sunucu masrafı ile GitHub Pages üzerinde çalışacak şekilde optimize edilmiştir.
+          </p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="mt-auto border-t border-gray-200 dark:border-gray-800/80 py-6 bg-white dark:bg-gray-900 text-center text-xs text-gray-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-gray-900 dark:text-white">StudyTracker</span>
+        <span>•</span>
+        <span>Akıllı YKS &amp; Ders Takip</span>
+      </div>
+      <p>
+        Bu platform <strong class="text-blue-600 dark:text-blue-400 font-extrabold">1has</strong> tarafından geliştirilmiştir.
+      </p>
+      <div class="text-[11px] text-gray-400">
+        GitHub Pages Ready
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. KITAP EKLEME MODALI (KİTAPİŞLER ENTEGRASYONLU) -->
+  <div id="modal-book" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="book-plus" class="w-5 h-5 text-blue-600"></i>
+          <h3 class="font-black text-lg">Kitap Ekle (Kitapişler Entegreli)</h3>
+        </div>
+        <button onclick="closeBookModal()" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
+        <!-- Kitapişler Live Search Bar -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300">
+            Kitapişler &amp; TYT/AYT Kataloğunda Kitap Ara:
+          </label>
+          <div class="relative">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400"></i>
+            <input type="text" id="kitapisler-search-input" oninput="debounceKitapislerSearch()" placeholder="Örn: 345 tyt matematik, bilgi sarmal, orijinal geometri..." class="w-full pl-10 pr-12 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+            <button onclick="searchKitapisler()" class="absolute right-2 top-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700">Ara</button>
+          </div>
+          <p class="text-[11px] text-gray-400">Yüzlerce popüler TYT &amp; AYT kaynak kitabı doğrudan kitapisler veritabanıyla eşleşir.</p>
+
+          <!-- Kitapişler Search Results Preview -->
+          <div id="kitapisler-results" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-52 overflow-y-auto custom-scrollbar pt-2 hidden">
+            <!-- Populated via search -->
+          </div>
+        </div>
+
+        <!-- Manual or Pre-filled Form -->
+        <form id="form-add-book" onsubmit="handleSaveBook(event)" class="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+          <input type="hidden" id="book-form-id">
+          <input type="hidden" id="book-form-cover">
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Kitap Adı *</label>
+              <input type="text" id="book-form-title" required placeholder="345 TYT Matematik Soru Bankası" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Yayınevi / Yazar</label>
+              <input type="text" id="book-form-author" placeholder="ÜçDörtBeş Yayınları" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Ders / Branş</label>
+              <select id="book-form-subject" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+                <option value="Matematik">Matematik</option>
+                <option value="Geometri">Geometri</option>
+                <option value="Türkçe">Türkçe</option>
+                <option value="Paragraf">Paragraf</option>
+                <option value="Fizik">Fizik</option>
+                <option value="Kimya">Kimya</option>
+                <option value="Biyoloji">Biyoloji</option>
+                <option value="Edebiyat">Türk Dili ve Edebiyatı</option>
+                <option value="Tarih">Tarih</option>
+                <option value="Coğrafya">Coğrafya</option>
+                <option value="Felsefe/Din">Felsefe &amp; Din</option>
+                <option value="Diğer">Diğer</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Toplam Sayfa *</label>
+              <input type="number" id="book-form-total-pages" min="1" required placeholder="440" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Çözülen Sayfa</label>
+              <input type="number" id="book-form-current-page" min="0" value="0" placeholder="0" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Hedef Bitiş Tarihi</label>
+              <input type="date" id="book-form-target-date" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Durum</label>
+              <select id="book-form-status" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+                <option value="active">Aktif Olarak Çözülüyor</option>
+                <option value="completed">Tamamlandı</option>
+                <option value="paused">Duraklatıldı</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Notlar</label>
+            <input type="text" id="book-form-notes" placeholder="Örn: Hafta sonları günde 20 sayfa çözülecek" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+          </div>
+
+          <div class="pt-3 flex justify-end gap-2">
+            <button type="button" onclick="closeBookModal()" class="px-4 py-2 text-xs font-bold rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">İptal</button>
+            <button type="submit" class="px-5 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20">Kaydet</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. DENEME EKLEME MODALI -->
+  <div id="modal-exam" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="clipboard-plus" class="w-5 h-5 text-purple-600"></i>
+          <h3 class="font-black text-lg">Yeni Deneme Sınavı Girişi</h3>
+        </div>
+        <button onclick="closeExamModal()" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="form-add-exam" onsubmit="handleSaveExam(event)" class="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Deneme Türü</label>
+            <div class="flex p-1 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-bold">
+              <button type="button" onclick="setExamModalType('tyt')" id="exam-type-tyt" class="flex-1 py-1.5 rounded-lg bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow">TYT</button>
+              <button type="button" onclick="setExamModalType('ayt')" id="exam-type-ayt" class="flex-1 py-1.5 rounded-lg text-gray-500 hover:text-gray-900">AYT</button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Deneme Adı *</label>
+            <input type="text" id="exam-form-name" required placeholder="3D TYT Türkiye Geneli 1" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Sınav Tarihi</label>
+            <input type="date" id="exam-form-date" required class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+          </div>
+        </div>
+
+        <!-- Subjects Scores Table -->
+        <div class="rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div class="bg-gray-50 dark:bg-gray-800/60 p-3 grid grid-cols-5 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">
+            <span class="text-left col-span-1">Ders</span>
+            <span>Doğru</span>
+            <span>Yanlış</span>
+            <span>Boş</span>
+            <span>Net</span>
+          </div>
+          <div id="exam-scores-rows" class="divide-y divide-gray-100 dark:divide-gray-800">
+            <!-- Generated dynamically based on TYT or AYT -->
+          </div>
+          <div class="bg-purple-50 dark:bg-purple-950/40 p-4 flex items-center justify-between border-t border-purple-100 dark:border-purple-900/60">
+            <span class="font-bold text-sm text-purple-900 dark:text-purple-300">Toplam Sınav Neti:</span>
+            <span id="exam-total-net-display" class="text-2xl font-black text-purple-600 dark:text-purple-400">0.00</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Notlar / Eksik Konu Değerlendirmesi</label>
+          <textarea id="exam-form-notes" rows="2" placeholder="Örn: Geometride üçgenlerde ve fizikte optikte zorlandım..." class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <button type="button" onclick="closeExamModal()" class="px-4 py-2 text-xs font-bold rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">İptal</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-500/20">Denemeyi Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. AI PLAN OLUŞTURUCU MODALI -->
+  <div id="modal-plan-generator" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-5 h-5 text-emerald-500"></i>
+          <h3 class="font-black text-lg">Multi-Agent Haftalık Plan Oluşturucu</h3>
+        </div>
+        <button onclick="closePlanGeneratorModal()" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 custom-scrollbar flex-1">
+        <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-300 leading-relaxed">
+          <strong>A-R007 Multi-Agent Algoritması:</strong><br>
+          Kayıtlı kitaplarının kalan sayfalarını ve son denemelerindeki net düşüşlerini analiz eder. Zayıf olduğun derslere otomatik olarak %40 daha fazla zaman ayırarak 7 günlük kişiselleştirilmiş görev takvimi çıkarır.
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Günlük Çalışma Süresi</label>
+            <select id="plan-daily-hours" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+              <option value="3">Günde 3 Saat (Hafif)</option>
+              <option value="4" selected>Günde 4 Saat (Önerilen)</option>
+              <option value="5">Günde 5 Saat (Yoğun)</option>
+              <option value="6">Günde 6 Saat (Maraton)</option>
+              <option value="8">Günde 8 Saat (Kamplar)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Öncelik Stratejisi</label>
+            <select id="plan-strategy" class="w-full px-3.5 py-2 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+              <option value="weakness">Zayıf Derslere Öncelik Ver (%50 Ağırlık)</option>
+              <option value="balanced">Dengeli Dağılım (Tüm Branşlar)</option>
+              <option value="finish_books">Kitapları Hızlı Bitirmeye Odaklan</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Optional Gemini API Key -->
+        <div class="pt-2">
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+            Google Gemini API Anahtarı (İsteğe Bağlı):
+          </label>
+          <input type="password" id="plan-gemini-key" placeholder="AIzaSy... (Boş bırakırsanız dahili Multi-Agent motoru çalışır)" class="w-full px-3.5 py-2 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
+          <p class="text-[11px] text-gray-400 mt-1">API anahtarınız yoksa bile dahili akıllı algoritma %100 kusursuz ve anında çalışır.</p>
+        </div>
+
+        <div class="pt-3 flex justify-end gap-2">
+          <button type="button" onclick="closePlanGeneratorModal()" class="px-4 py-2 text-xs font-bold rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">Vazgeç</button>
+          <button type="button" onclick="generateMultiAgentPlan()" id="btn-generate-plan" class="px-5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>Programı Oluştur</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio element for Pomodoro chime -->
+  <audio id="audio-bell" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mp3">
+  </audio>
+
+  <!-- APP LOGIC & INTEGRATIONS SCRIPT -->
+  <script src="app.js"></script>
+</body>
+</html>
